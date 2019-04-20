@@ -1,5 +1,5 @@
 {
-    "name": "Polly",
+    "name": "polly",
     "version": "1.0.0",
     "description": "Simple, flexible, non-bloated poll bot",
     "main": "bot.js",
