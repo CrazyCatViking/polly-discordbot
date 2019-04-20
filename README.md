@@ -1,1 +1,1 @@
-# polly-simplediscordpollbot
+# PollyEdge
