@@ -1,5 +1,5 @@
 # Polly-DiscordBot: Simple discord poll-bot that runs on node.js
-Polly is designed to be simple and easy to use. For now it is simply a discord bot,
+Polly is designed to be simple and easy to use. For now it is simply a discord poll bot,
 but plans are for polly to be a simple, non-bloated general purpose bot. 
 
 As it is polly technically only supports a single discord client, however it will 
