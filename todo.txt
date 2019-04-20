@@ -1,0 +1,28 @@
+NEW/PLANNED FEATURES:
+    Read/Write Functionality HIGH PRIORITY
+        -> Polly should write .json files containing information about any active and stored polls
+        -> Polly should also delete or archive a poll's .json when the poll is ended
+    User configurability MEDIUM PRIORITY
+        -> Things like the command initializer and other features of the bot should be user configurable and
+           should also be stored inside a .json for the next time the bot starts.
+    Code flag for multi-client support LOW PRIORITY
+        -> The bot is supposed to be ran by the individual user on their own hardware or server, therefore this is not a large priority
+           the bot should be able to handle multiple servers at the same time. I want to set a code flag to run the bot in single or multi-client mode.
+           To make this work the bot should spawn individual processes to handle the conected clients.
+    Support for command flags MEDIUM PRIORITY
+        -> The bot should check input arguments for command flags (-Flag) and seperate them into an array containing these flags
+           in case the command used supports them
+    Implement Bug Tracker bot side
+        -> In the case a user encounters a bug or unexpected behaviour the bot should report this directly to a bug tracking file
+           on the hosting server (or potentially of this ever goes public to github bug tracker), this should be reportable by the users
+           using something like a p!reportbug <AFFECTED COMMAND> <EXPLANATION OF BUG> <STEPS TO DUPLICATE> <SEVERITY>
+
+REQUESTED FEATURES (BY THE BENEVOLENT RIN-SENPAI):
+    @Everyone flag -> Requires bot to handle command flags which has not been implemented
+        -> Command flag to allow the bot to @everyone when poll is posted
+
+IMPROVEMENTS ON CURRENT FEATURES:
+    Permission system MEDIUM PRIORITY
+        -> Implement proper permission system
+
+BUGS - NEEDS FIXING:

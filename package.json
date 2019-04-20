@@ -1,0 +1,10 @@
+{
+    "name": "BestPollBotEU",
+    "version": "1.0.0",
+    "description": "Simple, flexible, non-bloated poll bot",
+    "main": "bot.js",
+    "author": "Kristoffer Jansen",
+    "dependencies": {
+        "discord.js": "^11.4.2"
+    }
+}
