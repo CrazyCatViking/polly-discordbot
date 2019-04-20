@@ -16,7 +16,7 @@ exports.writeFile = function(string) {
 };
 
 //Map file in a directory -> Return array of all individual files
-exports.mapDir = function() {
+exports.mapDir = function(dirPath) {
     
     return dirFileMap;
 };
