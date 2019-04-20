@@ -1,1 +1,3 @@
-# PollyEdge
+# Polly-DiscordBot
+
+This is the 
