@@ -1,14 +1,12 @@
 const Discord = require('discord.js');
 const auth = require('./auth.json');
-const path = require('path');
 const fs = require('fs');
 const client = new Discord.Client();
 
-//Make this configurable at runtime
-//Implement IO system to load config files (or .json) at startup 
+//TODO: Make this configurable at runtime
 const emojiList = require('./emojis.json');
 const botName = 'polly';
-const botCommand = 'p!';
+const botCommand = 'po!';
 
 var guilds;
 var guild;
@@ -17,7 +15,7 @@ var permLvl;
 //Poll class
 class Poll {
     constructor(pollID, pollName) {
-        this.id = pollID;
+        this.pollID = pollID;
         this.pollName = pollName;
         this.hideVotes = false;
         this.activePoll = false;
@@ -32,7 +30,8 @@ class Poll {
 
     set voteModeVisibility(selection) {
         this.hideVotes = seletion;
-    }
+    };
+
 
     set voteModeSingle(selection) {
         this.singleVotes = selection;
@@ -136,7 +135,79 @@ client.once('ready', () => {
     guilds = client.guilds.array();
     guild = guilds[0];
 
+    //TODO: Make permission levels configurable at runtime!
     permLvl = guild.roles.find(role => role.name === "Crew 🔰");
+
+    //Check for stored poll at startup
+    const path = './polls/';
+    var dirFileMap = mapDir(path);
+    if (!(mapDir === undefined || mapDir.length == 0)) {
+        for (file in dirFileMap) {
+            var fileContents = readFile(path + dirFileMap[file], 'utf8');
+            var jsonContents = JSON.parse(fileContents);
+
+            if (jsonContents.type && jsonContents.type == "poll") {
+                var newPoll = new Poll(jsonContents.pollID, jsonContents.pollName);
+                newPoll.botID = jsonContents.botID;
+                for (option in jsonContents.pollOptions) {
+                    newPoll.pollOptions[jsonContents.pollOptions[option]] = jsonContents.pollOptionsEmojis[option];
+                }
+                newPoll.activePoll = jsonContents.activePoll;
+                if (newPoll.activePoll) {
+                    var channels = client.channels.array();
+                    var aChannel;
+                    for (channel in channels) {
+                        if (channels[channel].id == jsonContents.channelID) {
+                            aChannel = channels[channel];
+                            break;
+                        }
+                    }
+                    aChannel.fetchMessage(jsonContents.pollMessageID).then(async function(message) {
+                        newPoll.message = message;
+                        polls[newPoll.pollID] = newPoll;
+                        var messageReactions = message.reactions.array();
+                        var duplicateUsers = [];
+                        for (reaction in messageReactions) {
+                            var containsReaction = false;
+                            for (option in polls[newPoll.pollID].pollOptions) {
+                                if (messageReactions[reaction].emoji.name == polls[newPoll.pollID].pollOptions[option]) {
+                                    containsReaction = true;
+                                }
+                            }
+
+                            if (containsReaction) {
+                                //await console.log(messageReactions[reaction].emoji.name);
+                                await messageReactions[reaction].fetchUsers().then(users => {
+                                    var reactionUsers = users.array();
+                                    for (user in reactionUsers) {
+                                        //console.log(reactionUsers[user].username);
+                                        if (polls[newPoll.pollID].hasVoted.includes(reactionUsers[user].id)) {
+                                            messageReactions[reaction].remove(reactionUsers[user].id);
+                                            if (!duplicateUsers.includes(reactionUsers[user])) {
+                                                duplicateUsers.push(reactionUsers[user]);
+                                            }
+                                        } else if (reactionUsers[user].id != polls[newPoll.pollID].botID) {
+                                            polls[newPoll.pollID].hasVoted.push(reactionUsers[user].id);
+                                        }
+                                    }
+                                });
+                            } else {
+                                await messageReactions[reaction].fetchUsers().then(users => {
+                                    var reactionUsers = users.array();
+                                    for (user in reactionUsers) {
+                                        messageReactions[reaction].remove(reactionUsers[user].id);
+                                    }
+                                });
+                            }
+                        }
+                        for (user in duplicateUsers) {
+                            duplicateUsers[user].send("After restarting, you were found to have multiple entries in the poll.\nAll but one reaction has been removed, please verify that your vote is correct")
+                        }
+                    });
+                }
+            }
+        }
+    }
 });
 
 client.login(auth.edge);
@@ -146,7 +217,7 @@ var polls = {};
 client.on('message', (message) => {
     //MAKE PERMISSION STUFF NICER, MORE ROBUST AND FLEXIBLE 
     if ((message.content.substring(0, botCommand.length) == botCommand) && message.member.roles.array().includes(permLvl)) {
-        var args = getStringArgs(message.content.substring(botCommand.length + 1));
+        var args = getStringArgs(message.content.substring(botCommand.length));
         cmd = args[0];
         args = args.slice(1);
 
@@ -173,6 +244,7 @@ client.on('message', (message) => {
         break;
         //!<botName> help
         case 'help':
+            //TODO: Store available commands in a txt or .json file instead of hard-coding it
             var string = "My name is " + botName + " and these are my skills!\n";
             string = string + botCommand + " createpoll <pollID> <pollName> <option1 ... optionN>\n";
             string = string + botCommand + " postpoll <pollID>\n";
@@ -322,6 +394,8 @@ function postPoll(message, args) {
                 await message.react(polls[args[0]].pollOptions[key]);
             }
 
+            var pollSaveFile = generatePollJSON(polls[args[0]]);
+            writeFile(pollSaveFile, "./polls/" + args[0] + ".json");
         });
     } else {
         message.channel.send('This poll does not exist, did you type the name correctly?');
@@ -336,6 +410,9 @@ function endPoll(message, args) {
             return;
         }
         polls[args[0]].endPoll();
+
+        var path = './polls/';
+        deleteFile(path + polls[args[0]].pollID + '.json');
         delete polls[args[0]];
     } else {
         message.channel.send("This poll does not exist, did you type the name correctlty?");
@@ -385,7 +462,7 @@ function getStringArgs(string) {
     return args;
 }
 
-//Generates random number 
+//Generates random number return dirFileMap;
 function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
 }
@@ -403,3 +480,76 @@ function generateEmbedPoll(title, string, author, footer) {
     return embed;
 }
 
+//Generate poll.json
+function generatePollJSON(thisPoll) {
+    var string = "{\n";
+
+    string = string + '"type": "poll",\n';
+    string = string + '"pollID": "' + thisPoll.pollID + '",\n';
+    string = string + '"pollName": "' + thisPoll.pollName + '",\n';
+    string = string + '"botID": "' + thisPoll.botID + '",\n';
+
+    var pollOptions = "[";
+    var pollOptionsEmojis = "[";
+    var firstRun = true;
+    for (option in thisPoll.pollOptions) {
+        if (!firstRun) {
+            pollOptions = pollOptions + ',';
+            pollOptionsEmojis = pollOptionsEmojis + ',';
+        } else {    
+            firstRun = false;
+        }
+        pollOptions = pollOptions + '"' + option + '"';
+        pollOptionsEmojis = pollOptionsEmojis + '"' + thisPoll.pollOptions[option] + '"';
+    }
+    pollOptions = pollOptions + ']';
+    pollOptionsEmojis = pollOptionsEmojis + ']';
+    string = string + '"pollOptions": ' + pollOptions + ',\n';
+    string = string + '"pollOptionsEmojis": ' + pollOptionsEmojis + ',\n';
+    
+    string = string + '"activePoll": ' + 'true,\n';
+    string = string + '"pollMessageID": "' + thisPoll.message.id + '",\n';
+    string = string + '"channelID": "' + thisPoll.message.channel.id + '"\n';
+
+    string = string + '}'
+
+    return string;
+}
+
+//IO SYSTEM
+//Read File
+function readFile(filePath, coding) {
+    //TODO: Add error checking!!!!!
+    return fileContents = fs.readFileSync(filePath, coding);
+}
+
+//Write File 
+function writeFile(data, path) {
+    //TODO: Add error checking!!!!
+    fs.writeFile(path, data, 'utf8', (err) => {
+        if (err) {
+            throw err;
+            console.log(err);
+        }
+    });
+}
+
+//Delete file
+function deleteFile(path) {
+    fs.unlinkSync(path, (err) => {
+        if (err) {
+            throw err;
+            console.log(err);
+        }
+    });
+}
+
+//Map file in a directory -> Return array of all individual files
+function mapDir(dirPath) {
+    //TODO: Add error cheking!!!!
+    var dirFileMap = [];
+    fs.readdirSync(dirPath).forEach(function(file) {
+        dirFileMap.push(file);    
+    });
+    return dirFileMap;
+}

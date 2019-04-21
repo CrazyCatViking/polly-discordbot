@@ -1,7 +1,4 @@
 NEW/PLANNED FEATURES:
-    Read/Write Functionality HIGH PRIORITY
-        -> Polly should write .json files containing information about any active and stored polls
-        -> Polly should also delete or archive a poll's .json when the poll is ended
     User configurability MEDIUM PRIORITY
         -> Things like the command initializer and other features of the bot should be user configurable and
            should also be stored inside a .json for the next time the bot starts.

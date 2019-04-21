@@ -15,3 +15,4 @@ Requirements to run polly:
 - node.js
 - Discord application for connecting bot application with bot interface
 
+TODO:
