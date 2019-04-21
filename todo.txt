@@ -17,7 +17,7 @@ NEW/PLANNED FEATURES:
 REQUESTED FEATURES (BY THE BENEVOLENT RIN-SENPAI):
     @Everyone flag -> Requires bot to handle command flags which has not been implemented
         -> Command flag to allow the bot to @everyone when poll is posted
-
+    Chekc timestamp of reaction
 IMPROVEMENTS ON CURRENT FEATURES:
     Permission system MEDIUM PRIORITY
         -> Implement proper permission system

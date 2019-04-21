@@ -167,6 +167,7 @@ client.once('ready', () => {
                         polls[newPoll.pollID] = newPoll;
                         var messageReactions = message.reactions.array();
                         var duplicateUsers = [];
+                        var firstReaction = {};
                         for (reaction in messageReactions) {
                             var containsReaction = false;
                             for (option in polls[newPoll.pollID].pollOptions) {
@@ -188,6 +189,7 @@ client.once('ready', () => {
                                             }
                                         } else if (reactionUsers[user].id != polls[newPoll.pollID].botID) {
                                             polls[newPoll.pollID].hasVoted.push(reactionUsers[user].id);
+                                            firstReaction[reactionUsers[user].id] = messageReactions[reaction];
                                         }
                                     }
                                 });
@@ -201,7 +203,8 @@ client.once('ready', () => {
                             }
                         }
                         for (user in duplicateUsers) {
-                            duplicateUsers[user].send("After restarting, you were found to have multiple entries in the poll.\nAll but one reaction has been removed, please verify that your vote is correct")
+                            firstReaction[duplicateUsers[user].id].remove(duplicateUsers[user]);
+                            duplicateUsers[user].send("After restarting, you were found to have multiple entries in the poll,\nas a result your vote has been reset, please readd your vote");
                         }
                     });
                 }
@@ -210,7 +213,7 @@ client.once('ready', () => {
     }
 });
 
-client.login(auth.edge);
+client.login(auth.token);
 var polls = {};
 
 //CODE FOR HANDELING MESSAGE EVENTS (LISTENS FOR COMMANDS)
