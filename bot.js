@@ -5,12 +5,14 @@ const client = new Discord.Client();
 
 //TODO: Make this configurable at runtime
 const emojiList = require('./emojis.json');
-const botName = 'polly';
-const botCommand = 'po!';
 
 var guilds;
 var guild;
-var permLvl;
+var commandPermission = {};
+var commandList = [];
+var commandAliases = {};
+var botName = 'polly';
+var botCommand = 'po!';
 
 //Poll class
 class Poll {
@@ -130,6 +132,7 @@ class Poll {
     }
 }
 
+//Load configs and settings when client is ready
 client.once('ready', () => {
     console.log('Ready!');
     guilds = client.guilds.array();
@@ -138,8 +141,44 @@ client.once('ready', () => {
     //TODO: Make permission levels configurable at runtime!
     permLvl = guild.roles.find(role => role.name === "Crew 🔰");
 
-    //Check for stored poll at startup
-    const path = './polls/';
+    //Load config.json
+    //TODO IMPLEMENT LOADING SETTINGS FROM CONFIG FILE
+    var path = './config.json';
+    var fileContents = readFile(path, 'utf8');
+    var jsonContents = JSON.parse(fileContents);
+    if (!(jsonContents === undefined) && jsonContents.type && jsonContents == 'config') {
+        var commands = jsonContents.commands;
+        botName = jsonContents.botName;
+        botCommand = jsoncontents.botCommand;
+
+        for (command in commands) {
+            commandList.push(commands[command]);
+            if (!(jsonContents[commands[command]] === undefined)) {
+                commandAliases[commands[command]] = jsonContents[commands[command]];
+            }
+        }
+    }
+
+    //Set permissions from permissions.json 
+    //TODO IMPLEMENT PERMISSIONS
+    path = './permissions.json';
+    fileContents = readFile(path, 'utf8');
+    jsonContents = JSON.parse(fileContents);
+    if (!(jsonContents === undefined) && jsonContents.type && jsonContents == 'permissions') {
+        if (jsonContents.userPermissions === true) {
+            for (command in commandList) {
+                if (!(jsonContents[commandList[command]] === undefined)) {
+                    commandPermission[commands[command]] = jsonContents[commandList[command]];
+                }
+            }
+
+        } else {
+            console.log("Permissions are not configured, anyone can call commands from the bot");
+        }
+    }
+
+    //Check for stored polls and load if they exist
+    path = './polls/';
     var dirFileMap = mapDir(path);
     if (!(mapDir === undefined || mapDir.length == 0)) {
         for (file in dirFileMap) {
@@ -213,55 +252,79 @@ client.once('ready', () => {
     }
 });
 
-client.login(auth.token);
+//Log into client bot
+client.login(auth.edge);
 var polls = {};
+
+
+
+
+
+
+
 
 //CODE FOR HANDELING MESSAGE EVENTS (LISTENS FOR COMMANDS)
 client.on('message', (message) => {
-    //MAKE PERMISSION STUFF NICER, MORE ROBUST AND FLEXIBLE 
-    if ((message.content.substring(0, botCommand.length) == botCommand) && message.member.roles.array().includes(permLvl)) {
+    //MAKE PERMISSION STUFF NICER, MORE ROBUST AND FLEXIBLE
+    var msgInit = message.content.substring(0, botCommand.length);
+    if (msgInit == botCommand) {
         var args = getStringArgs(message.content.substring(botCommand.length));
         cmd = args[0];
         args = args.slice(1);
 
-        switch(cmd) {
-        //!<botCommand> createpoll <pollID> <pollName> <option1 ... optionN>
-        case 'createpoll':
-            createPoll(message, args);
-        break;
-        //!<botCommand> postpoll <pollID>
-        case 'postpoll':
-            postPoll(message, args);
-        break;
-        //!<botCommand> endpoll <pollID>
-        case 'endpoll':
-            endPoll(message, args);
-        break;
-        //!<botCommand> listpolls
-        case 'listpolls':
-            var string = "**These are the polls I know about**\n";
-            for (poll in polls) {
-                string = string + polls[poll].id + "    " + polls[poll].pollName + "\n"; 
-            }
-            message.channel.send(string);
-        break;
-        //!<botName> help
-        case 'help':
-            //TODO: Store available commands in a txt or .json file instead of hard-coding it
-            var string = "My name is " + botName + " and these are my skills!\n";
-            string = string + botCommand + " createpoll <pollID> <pollName> <option1 ... optionN>\n";
-            string = string + botCommand + " postpoll <pollID>\n";
-            string = string + botCommand + " endpoll <pollID>\n";
-            string = string + botCommand + " listpolls";
-            message.channel.send(string);
-        break;
-        default:
-            message.channel.send("I don't know what you want from me. :/");
-        break;
+        try {
+            cmd = resolveAlias(cmd);
+        } catch(err) {
+            console.log(err);
         }
-    } else if (message.content.substring(0, botName.length + 1) == '!' + botName) {
-        message.channel.send("You are not powerfull enough to beckon " + botName);
+
+        if (cmd in commandList && hasPermission(cmd, message.member)) {
+            switch(cmd) {
+                //<botCommand> createpoll <pollID> <pollName> <option1 ... optionN>
+                case 'createpoll':
+                    createPoll(message, args);
+                break;
+                //<botCommand> postpoll <pollID>
+                case 'postpoll':
+                    postPoll(message, args);
+                break;
+                //<botCommand> endpoll <pollID>
+                case 'endpoll':
+                    endPoll(message, args);
+                break;
+                //<botCommand> listpolls
+                case 'listpolls':
+                    var string = "**These are the polls I know about**\n";
+                    for (poll in polls) {
+                        string = string + polls[poll].id + "    " + polls[poll].pollName + "\n"; 
+                    }
+                    message.channel.send(string);
+                break;
+                //<botCommand> setalias <command> <alias>
+                case 'setalias':
+                    //Implement code
+                break;
+                //<botCommand> setpermission <command> <roleName>'
+                case 'setpermission':
+                    //Implement code
+                break;
+                //<botCommand> help
+                case 'help':
+                    //TODO: Store available commands in a txt or .json file instead of hard-coding it
+                    var string = "My name is " + botName + " and these are my skills!\n";
+                    string = string + botCommand + " createpoll <pollID> <pollName> <option1 ... optionN>\n";
+                    string = string + botCommand + " postpoll <pollID>\n";
+                    string = string + botCommand + " endpoll <pollID>\n";
+                    string = string + botCommand + " listpolls";
+                    message.channel.send(string);
+                break;
+                default:
+                    message.channel.send("I don't know what you want from me. :/");
+                break;
+                }
+        }
     }
+    //TODO Implement tolkit to make user configured commands
 });
 
 //CODE FOR HANDLING MESSAGE REACTIONS ADDED TO CACHED POSTS (NB!NB!NB! CHECK IF CASHING IS SUFFICIENT OR IF RAW EVENT IS NEEDED!)
@@ -284,6 +347,13 @@ client.on('messageReactionRemove', (reaction, user) => {
         }
     }
 });
+
+
+
+
+
+
+
 
 //REVISIT IF THERE ARE EASIER WAYS TO HANDLE THIS
 //FUNCTIONS FOR HANDLING REACTIONS
@@ -422,6 +492,10 @@ function endPoll(message, args) {
     }
 }
 
+
+
+
+
 //GENERAL FUNCTIONS
 //Transforms string into individual variables based on whitespace and ""
 function getStringArgs(string) {
@@ -463,6 +537,35 @@ function getStringArgs(string) {
         }
     }
     return args;
+}
+
+//Resolve if user has permissions for command
+function hasPermission(cmd, member) {
+    if (!(commandList.includes(cmd))) {
+        return false;
+    }
+    
+    var memberRoles = member.roles.array();
+    for (role in memberRoles) {
+        if (commandPermission[cmd].includes(memberRoles[role].id)) {
+            return true;
+        } else if (commandPermissions[cmd].includes("default")) {
+            return true;
+        }
+    }
+    return false;
+}
+
+//Resolve command aliases
+function resolveAlias(cmd) {
+    for (alias in commandAliases) {
+        if (commandAliases[alias] == cmd) {
+            return alias;
+        }  else {
+            const err = "ERROR: This is not an alias to any known command";
+            throw err;
+        }
+    }
 }
 
 //Generates random number return dirFileMap;
@@ -518,6 +621,41 @@ function generatePollJSON(thisPoll) {
 
     return string;
 }
+
+//Generate config.json
+function generateConfig() {
+    var config = "{\n";
+
+    config = config + '}';
+    return config;
+}
+
+//Generate permissions.json
+function generatePermissions() {
+    var permissions = "{\n";
+
+    permissions = permissions + '}';
+    return permissions;
+}
+
+//Update config.json when bot configuration changes
+function updateConfig() {
+    var config = "{\n";
+
+    config = config + '}';
+    return config;
+}
+
+//Update permissions.json when permissions change
+function updatePermissions() {
+    var permissions = "{\n";
+
+    permissions = permissions + '}';
+    return permissions;
+}
+
+
+
 
 //IO SYSTEM
 //Read File

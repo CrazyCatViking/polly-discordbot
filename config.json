@@ -1,0 +1,11 @@
+{
+    "type": "config",
+    "botname": "polly",
+    "botCommand": "po!",
+    
+    "commands": ["createpoll", "postpoll", "endpoll"],
+    "usesAliases": true,
+    "createpoll": ["poll"],
+    "postpoll": ["post"],
+    "endpoll": ["end"]
+}

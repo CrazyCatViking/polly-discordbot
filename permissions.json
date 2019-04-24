@@ -1,0 +1,8 @@
+{
+    "type": "permissions",
+    "usePermissions": true,
+    
+    "createpoll": ["default"],
+    "postpoll": ["default"],
+    "endpoll": ["default"]
+}
